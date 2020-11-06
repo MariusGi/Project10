@@ -58,6 +58,8 @@ class PublicHolidaysController extends AbstractController
                 $country = new Country();
                 $country->setCountryCode($countryData['countryCode']);
                 $country->setFullName($countryData['fullName']);
+                $country->setHolidaysAvailableFromYear($countryData['fromDate']['year']);
+                $country->setHolidaysAvailableToYear($countryData['toDate']['year']);
 
                 $entityManager->persist($country);
             }
