@@ -3,8 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\Country;
+use App\Form\PublicHolidayType;
 use App\Repository\CountryRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
@@ -25,16 +27,19 @@ class PublicHolidaysController extends AbstractController
 
     /**
      * @Route("/public-holidays", name="public_holidays")
+     * @param Request $request
      * @param CountryRepository $countryRepository
      * @return Response
      * @throws TransportExceptionInterface
      */
-    public function index(CountryRepository $countryRepository): Response
+    public function index(Request $request, CountryRepository $countryRepository): Response
     {
         $entityManager = $this->getDoctrine()->getManager();
         $isCountryTableHasData = $countryRepository->findBy(array(), null, 1);
 
+        // Add countries in API to Country table if it is empty
         if (!$isCountryTableHasData) {
+            $content = [];
             $response = $this->client->request(
                 'GET',
                 'https://kayaposoft.com/enrico/json/v2.0/?action=getSupportedCountries'
@@ -60,8 +65,11 @@ class PublicHolidaysController extends AbstractController
             $entityManager->flush();
         }
 
+        $form = $this->createForm(PublicHolidayType::class);
+
         return $this->render('public_holidays/index.html.twig', [
             'controller_name' => 'PublicHolidaysController',
+            'public_holiday_form' => $form->createView(),
         ]);
     }
 }

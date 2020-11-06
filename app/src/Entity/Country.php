@@ -34,6 +34,16 @@ class Country
      */
     private $public_holiday;
 
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $holidays_available_from_year;
+
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $holidays_available_to_year;
+
     public function __construct()
     {
         $this->public_holiday = new ArrayCollection();
@@ -94,6 +104,30 @@ class Country
                 $publicHoliday->setCountry(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getHolidaysAvailableFromYear(): ?int
+    {
+        return $this->holidays_available_from_year;
+    }
+
+    public function setHolidaysAvailableFromYear(int $holidays_available_from_year): self
+    {
+        $this->holidays_available_from_year = $holidays_available_from_year;
+
+        return $this;
+    }
+
+    public function getHolidaysAvailableToYear(): ?int
+    {
+        return $this->holidays_available_to_year;
+    }
+
+    public function setHolidaysAvailableToYear(int $holidays_available_to_year): self
+    {
+        $this->holidays_available_to_year = $holidays_available_to_year;
 
         return $this;
     }
