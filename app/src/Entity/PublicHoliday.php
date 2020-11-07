@@ -33,7 +33,7 @@ class PublicHoliday
     private $total_amount;
 
     /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\Country", inversedBy="public_holiday")
+     * @ORM\ManyToOne(targetEntity="App\Entity\Country", inversedBy="public_holiday", cascade={"persist"})
      * @ORM\JoinColumn(onDelete="CASCADE")
      */
     private $country;
