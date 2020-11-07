@@ -6,6 +6,7 @@ use App\Entity\Country;
 use App\Entity\PublicHoliday;
 use App\Form\PublicHolidayType;
 use App\Repository\CountryRepository;
+use App\Repository\PublicHolidayRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,11 +31,14 @@ class PublicHolidaysController extends AbstractController
      * @Route("/public-holidays", name="public_holidays")
      * @param Request $request
      * @param CountryRepository $countryRepository
+     * @param PublicHolidayRepository $publicHolidayRepository
      * @return Response
      * @throws TransportExceptionInterface
      */
-    public function index(Request $request, CountryRepository $countryRepository): Response
+    public function index(Request $request, CountryRepository $countryRepository,
+                          PublicHolidayRepository $publicHolidayRepository): Response
     {
+        $publicHolidayFilterResult = [];
         $entityManager = $this->getDoctrine()->getManager();
         $isCountryTableHasData = $countryRepository->findBy(array(), null, 1);
 
@@ -77,9 +81,24 @@ class PublicHolidaysController extends AbstractController
         // After form submit
         ///////////////////////////////////////////////////////
         if ($form->isSubmitted() && $form->isValid()) {
+
             $content = [];
             $formData = $form->getData();
-            $countryData = $countryRepository->findOneBy(['id' => $formData['country']]);
+
+            ///////////////////////////////////////////////////////
+            // Check if data already exists in db
+            ///////////////////////////////////////////////////////
+            if ($publicHolidayData = $publicHolidayRepository->findOneBy([
+                'country' => $formData['country']->getId(),
+                'year' => $formData['year'],
+            ])) {
+
+                // TODO make request to db
+                die('make a request to db');
+
+            }
+
+            $countryData = $countryRepository->findOneBy(['id' => $formData['country']->getId()]);
             $countryCode = $countryData->getCountryCode();
             $dataAvailableFromYear = $countryData->getHolidaysAvailableFromYear();
             $dataAvailableToYear = $countryData->getHolidaysAvailableToYear();
@@ -107,9 +126,11 @@ class PublicHolidaysController extends AbstractController
                 // Insert data into public_holidays table
                 ///////////////////////////////////////////////////////
                 $publicHolidaysMonthDay = [];
+                $totalAmountOfPublicHolidays = count($content);
                 $publicHolilday = new PublicHoliday();
                 $publicHolilday->setCountry($formData['country']);
                 $publicHolilday->setYear($formData['year']);
+                $publicHolilday->setTotalAmount($totalAmountOfPublicHolidays);
 
                 foreach ($content as $singlePublicHoliday) {
                     $month = $singlePublicHoliday['date']['month'];
@@ -162,16 +183,24 @@ class PublicHolidaysController extends AbstractController
                     }
                 }
 
-                $publicHolilday->setTotalAmount($maxFreeDaysInARow);
+                $publicHolilday->setMaxFreeDaysInARow($maxFreeDaysInARow);
 
                 $entityManager->persist($publicHolilday);
                 $entityManager->flush();
+
+                $publicHolidayFilterResult = [
+                    'public_holidays' => '',
+                    'total_amount_of_public_holidays' => $totalAmountOfPublicHolidays,
+                    'status' => '',
+                    'max_number_of_free_days' => $maxFreeDaysInARow,
+                ];
             }
         }
 
         return $this->render('public_holidays/index.html.twig', [
             'controller_name' => 'PublicHolidaysController',
             'public_holiday_form' => $form->createView(),
+            'public_holiday_filter_result' => $publicHolidayFilterResult,
         ]);
     }
 }

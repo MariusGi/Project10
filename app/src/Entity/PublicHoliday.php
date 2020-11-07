@@ -33,6 +33,11 @@ class PublicHoliday
     private $total_amount;
 
     /**
+     * @ORM\Column(type="smallint")
+     */
+    private $max_free_days_in_a_row;
+
+    /**
      * @ORM\ManyToOne(targetEntity="App\Entity\Country", inversedBy="public_holiday", cascade={"persist"})
      * @ORM\JoinColumn(onDelete="CASCADE")
      */
@@ -87,6 +92,18 @@ class PublicHoliday
     public function setCountry(?Country $country): self
     {
         $this->country = $country;
+
+        return $this;
+    }
+
+    public function getMaxFreeDaysInARow(): ?int
+    {
+        return $this->max_free_days_in_a_row;
+    }
+
+    public function setMaxFreeDaysInARow(int $max_free_days_in_a_row): self
+    {
+        $this->max_free_days_in_a_row = $max_free_days_in_a_row;
 
         return $this;
     }
