@@ -91,7 +91,7 @@ class PublicHolidaysController extends AbstractController
                 $response = $this->client->request(
                     'GET',
                     "https://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForYear&year={$formData['year']}
-                         &country={$countryCode}&holidayType=public_holiday"
+                     &country={$countryCode}&holidayType=public_holiday"
                 );
 
                 try {
@@ -119,7 +119,50 @@ class PublicHolidaysController extends AbstractController
                 }
 
                 $publicHolilday->setMonthDay($publicHolidaysMonthDay);
-                $publicHolilday->setTotalAmount(10);
+
+                ///////////////////////////////////////////////////////
+                // Count max free days in a row in a year
+                ///////////////////////////////////////////////////////
+                $maxFreeDaysInARow = 0;
+                $currentFreeDaysInARow = 0;
+
+                for ($monthNumber = 1; $monthNumber < 13; $monthNumber++) {
+                    for ($dayNumber = 1; $dayNumber < 32; $dayNumber++) {
+                        $content = [];
+                        $response = $this->client->request(
+                            'GET',
+                            "https://kayaposoft.com/enrico/json/v2.0/?action=isWorkDay&date={$dayNumber}-{$monthNumber}-{$formData['year']}&country={$countryCode}"
+                        );
+
+                        try {
+                            $content = $response->toArray();
+                        } catch (ClientExceptionInterface $e) {
+                        } catch (DecodingExceptionInterface $e) {
+                        } catch (RedirectionExceptionInterface $e) {
+                        } catch (ServerExceptionInterface $e) {
+                        } catch (TransportExceptionInterface $e) {
+                        }
+
+                        // Check if dayNumber is valid
+                        if (isset($content['error'])) {
+                            break;
+                        }
+
+                        if ($content['isWorkDay'] == true) {
+
+                            if ($maxFreeDaysInARow < $currentFreeDaysInARow) {
+                                $maxFreeDaysInARow = $currentFreeDaysInARow;
+                            }
+
+                            $currentFreeDaysInARow = 0;
+                        } else {
+                            $currentFreeDaysInARow++;
+                        }
+
+                    }
+                }
+
+                $publicHolilday->setTotalAmount($maxFreeDaysInARow);
 
                 $entityManager->persist($publicHolilday);
                 $entityManager->flush();
