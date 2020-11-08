@@ -84,18 +84,27 @@ class PublicHolidaysController extends AbstractController
             ])) {
                 $typeOfDay = $dailyCountryChecksData->getTypeOfDay();
             } else {
-                $dailyCountryChecksOnRequest = new DailyCountryChecksOnRequest();
-                $dailyCountryChecksOnRequest->setCountry($formData['country']);
+                ///////////////////////////////////////////////////////
+                // Update entity if it exists
+                ///////////////////////////////////////////////////////
                 $countryData = $countryRepository->findOneBy(['id' => $formData['country']->getId()]);
                 $countryCode = $countryData->getCountryCode();
                 $typeOfDay = $makeApiRequest->getTypeOfDay($this->client, $countryCode);
+                $dailyCountryChecksOnRequest = $dailyCountryChecksOnRequestRepository->findOneBy([
+                    'country' => $formData['country']->getId(),
+                ]);
+
+                if (!$dailyCountryChecksOnRequest) {
+                    $dailyCountryChecksOnRequest = new DailyCountryChecksOnRequest();
+                    $dailyCountryChecksOnRequest->setCountry($formData['country']);
+                }
+
                 $dailyCountryChecksOnRequest->setTypeOfDay($typeOfDay);
                 $dailyCountryChecksOnRequest->setUpdatedOn(new DateTime($currentDate));
 
                 $entityManager->persist($dailyCountryChecksOnRequest);
                 $entityManager->flush();
             }
-
             ///////////////////////////////////////////////////////
             // Check if holiday data already exists in db
             ///////////////////////////////////////////////////////
@@ -152,10 +161,10 @@ class PublicHolidaysController extends AbstractController
                     12 => 'dec',
                 ];
                 $totalAmountOfPublicHolidays = count($content);
-                $publicHolilday = new PublicHoliday();
-                $publicHolilday->setCountry($formData['country']);
-                $publicHolilday->setYear($formData['year']);
-                $publicHolilday->setTotalAmount($totalAmountOfPublicHolidays);
+                $publicHoliday = new PublicHoliday();
+                $publicHoliday->setCountry($formData['country']);
+                $publicHoliday->setYear($formData['year']);
+                $publicHoliday->setTotalAmount($totalAmountOfPublicHolidays);
 
                 foreach ($content as $singlePublicHoliday) {
                     $month = $singlePublicHoliday['date']['month'];
@@ -165,16 +174,16 @@ class PublicHolidaysController extends AbstractController
                     $publicHolidaysMonthDay[$mappedMonth][] = $day;
                 }
 
-                $publicHolilday->setMonthDay($publicHolidaysMonthDay);
+                $publicHoliday->setMonthDay($publicHolidaysMonthDay);
 
                 ///////////////////////////////////////////////////////
                 // Count max free days in a row in a year
                 ///////////////////////////////////////////////////////
                 $maxFreeDaysInARow = $makeApiRequest->getMaxFreeDaysInARowInAYear($this->client, $formData['year'], $countryCode);
 
-                $publicHolilday->setMaxFreeDaysInARow($maxFreeDaysInARow);
+                $publicHoliday->setMaxFreeDaysInARow($maxFreeDaysInARow);
 
-                $entityManager->persist($publicHolilday);
+                $entityManager->persist($publicHoliday);
                 $entityManager->flush();
 
                 $publicHolidayFilterResult = [
