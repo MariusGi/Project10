@@ -3,10 +3,13 @@
 namespace App\Controller;
 
 use App\Entity\Country;
+use App\Entity\DailyCountryChecksOnRequest;
 use App\Entity\PublicHoliday;
 use App\Form\PublicHolidayType;
 use App\Repository\CountryRepository;
+use App\Repository\DailyCountryChecksOnRequestRepository;
 use App\Repository\PublicHolidayRepository;
+use Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,11 +35,14 @@ class PublicHolidaysController extends AbstractController
      * @param Request $request
      * @param CountryRepository $countryRepository
      * @param PublicHolidayRepository $publicHolidayRepository
+     * @param DailyCountryChecksOnRequestRepository $dailyCountryChecksOnRequestRepository
      * @return Response
      * @throws TransportExceptionInterface
+     * @throws Exception
      */
     public function index(Request $request, CountryRepository $countryRepository,
-                          PublicHolidayRepository $publicHolidayRepository): Response
+                          PublicHolidayRepository $publicHolidayRepository,
+                          DailyCountryChecksOnRequestRepository $dailyCountryChecksOnRequestRepository): Response
     {
         $publicHolidayFilterResult = [
             'public_holidays' => '',
@@ -91,7 +97,68 @@ class PublicHolidaysController extends AbstractController
             $formData = $form->getData();
 
             ///////////////////////////////////////////////////////
-            // Check if data already exists in db
+            // Check if country status already exists in db for today
+            ///////////////////////////////////////////////////////
+            $currentDate = date('d-m-Y');
+
+            if ($dailyCountryChecksData = $dailyCountryChecksOnRequestRepository->findOneBy([
+                'country' => $formData['country']->getId(),
+                'updated_on' => new \DateTime($currentDate),
+            ])) {
+                $typeOfDay = $dailyCountryChecksData->getTypeOfDay();
+            } else {
+                $typeOfDay = 'Free day';
+                $dailyCountryChecksOnRequest = new DailyCountryChecksOnRequest();
+                $dailyCountryChecksOnRequest->setCountry($formData['country']);
+                $countryData = $countryRepository->findOneBy(['id' => $formData['country']->getId()]);
+                $countryCode = $countryData->getCountryCode();
+                $response = $this->client->request(
+                    'GET',
+                    "https://kayaposoft.com/enrico/json/v2.0?action=isWorkDay&date={$currentDate}&country={$countryCode}"
+                );
+
+                try {
+                    $content = $response->toArray();
+                } catch (ClientExceptionInterface $e) {
+                } catch (DecodingExceptionInterface $e) {
+                } catch (RedirectionExceptionInterface $e) {
+                } catch (ServerExceptionInterface $e) {
+                } catch (TransportExceptionInterface $e) {
+                }
+
+                if ($content['isWorkDay'] === true) {
+                    $typeOfDay = 'Workday';
+                }
+
+                if ($content['isWorkDay'] === false) {
+                    $response = $this->client->request(
+                        'GET',
+                        "https://kayaposoft.com/enrico/json/v2.0?action=isPublicHoliday&date={$currentDate}&country={$countryCode}"
+                    );
+
+                    try {
+                        $content = $response->toArray();
+                    } catch (ClientExceptionInterface $e) {
+                    } catch (DecodingExceptionInterface $e) {
+                    } catch (RedirectionExceptionInterface $e) {
+                    } catch (ServerExceptionInterface $e) {
+                    } catch (TransportExceptionInterface $e) {
+                    }
+
+                    if ($content['isPublicHoliday'] === true) {
+                        $typeOfDay = 'Public holiday';
+                    }
+                }
+
+                $dailyCountryChecksOnRequest->setTypeOfDay($typeOfDay);
+                $dailyCountryChecksOnRequest->setUpdatedOn(new \DateTime($currentDate));
+
+                $entityManager->persist($dailyCountryChecksOnRequest);
+                $entityManager->flush();
+            }
+
+            ///////////////////////////////////////////////////////
+            // Check if holiday data already exists in db
             ///////////////////////////////////////////////////////
             if ($publicHolidayData = $publicHolidayRepository->findOneBy([
                 'country' => $formData['country']->getId(),
@@ -105,7 +172,7 @@ class PublicHolidaysController extends AbstractController
                 $publicHolidayFilterResult = [
                     'public_holidays' => $publicHolidaysMonthDay,
                     'total_amount_of_public_holidays' => $totalAmountOfPublicHolidays,
-                    'status' => '',
+                    'status' => $typeOfDay,
                     'max_number_of_free_days' => $maxFreeDaysInARow,
                 ];
 
@@ -224,7 +291,7 @@ class PublicHolidaysController extends AbstractController
                 $publicHolidayFilterResult = [
                     'public_holidays' => $publicHolidaysMonthDay,
                     'total_amount_of_public_holidays' => $totalAmountOfPublicHolidays,
-                    'status' => '',
+                    'status' => $typeOfDay,
                     'max_number_of_free_days' => $maxFreeDaysInARow,
                 ];
             }
