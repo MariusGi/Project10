@@ -35,6 +35,11 @@ class Country
     private $public_holiday;
 
     /**
+     * @ORM\OneToMany(targetEntity="App\Entity\PublicHoliday", mappedBy="country")
+     */
+    private $daily_country_checks_on_request;
+
+    /**
      * @ORM\Column(type="integer")
      */
     private $holidays_available_from_year;
@@ -47,6 +52,7 @@ class Country
     public function __construct()
     {
         $this->public_holiday = new ArrayCollection();
+        $this->daily_country_checks_on_request = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -135,5 +141,35 @@ class Country
     public function __toString()
     {
         return $this->full_name;
+    }
+
+    /**
+     * @return Collection|PublicHoliday[]
+     */
+    public function getDailyCountryChecksOnRequest(): Collection
+    {
+        return $this->daily_country_checks_on_request;
+    }
+
+    public function addDailyCountryChecksOnRequest(PublicHoliday $dailyCountryChecksOnRequest): self
+    {
+        if (!$this->daily_country_checks_on_request->contains($dailyCountryChecksOnRequest)) {
+            $this->daily_country_checks_on_request[] = $dailyCountryChecksOnRequest;
+            $dailyCountryChecksOnRequest->setCountry($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDailyCountryChecksOnRequest(PublicHoliday $dailyCountryChecksOnRequest): self
+    {
+        if ($this->daily_country_checks_on_request->removeElement($dailyCountryChecksOnRequest)) {
+            // set the owning side to null (unless already changed)
+            if ($dailyCountryChecksOnRequest->getCountry() === $this) {
+                $dailyCountryChecksOnRequest->setCountry(null);
+            }
+        }
+
+        return $this;
     }
 }
