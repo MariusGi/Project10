@@ -38,7 +38,12 @@ class PublicHolidaysController extends AbstractController
     public function index(Request $request, CountryRepository $countryRepository,
                           PublicHolidayRepository $publicHolidayRepository): Response
     {
-        $publicHolidayFilterResult = [];
+        $publicHolidayFilterResult = [
+            'public_holidays' => '',
+            'total_amount_of_public_holidays' => '',
+            'status' => '',
+            'max_number_of_free_days' => '',
+        ];
         $entityManager = $this->getDoctrine()->getManager();
         $isCountryTableHasData = $countryRepository->findBy(array(), null, 1);
 
@@ -93,9 +98,22 @@ class PublicHolidaysController extends AbstractController
                 'year' => $formData['year'],
             ])) {
 
-                // TODO make request to db
-                die('make a request to db');
+                $publicHolidaysMonthDay = $publicHolidayData->getMonthDay();
+                $totalAmountOfPublicHolidays = $publicHolidayData->getTotalAmount();
+                $maxFreeDaysInARow = $publicHolidayData->getMaxFreeDaysInARow();
 
+                $publicHolidayFilterResult = [
+                    'public_holidays' => $publicHolidaysMonthDay,
+                    'total_amount_of_public_holidays' => $totalAmountOfPublicHolidays,
+                    'status' => '',
+                    'max_number_of_free_days' => $maxFreeDaysInARow,
+                ];
+
+                return $this->render('public_holidays/index.html.twig', [
+                    'controller_name' => 'PublicHolidaysController',
+                    'public_holiday_form' => $form->createView(),
+                    'public_holiday_filter_result' => $publicHolidayFilterResult,
+                ]);
             }
 
             $countryData = $countryRepository->findOneBy(['id' => $formData['country']->getId()]);
@@ -126,6 +144,20 @@ class PublicHolidaysController extends AbstractController
                 // Insert data into public_holidays table
                 ///////////////////////////////////////////////////////
                 $publicHolidaysMonthDay = [];
+                $monthMapping = [
+                    1 => 'jan',
+                    2 => 'feb',
+                    3 => 'mar',
+                    4 => 'apr',
+                    5 => 'may',
+                    6 => 'jun',
+                    7 => 'jul',
+                    8 => 'aug',
+                    9 => 'sep',
+                    10 => 'oct',
+                    11 => 'nov',
+                    12 => 'dec',
+                ];
                 $totalAmountOfPublicHolidays = count($content);
                 $publicHolilday = new PublicHoliday();
                 $publicHolilday->setCountry($formData['country']);
@@ -134,9 +166,10 @@ class PublicHolidaysController extends AbstractController
 
                 foreach ($content as $singlePublicHoliday) {
                     $month = $singlePublicHoliday['date']['month'];
+                    $mappedMonth = $monthMapping[$month];
                     $day = $singlePublicHoliday['date']['day'];
 
-                    $publicHolidaysMonthDay[$month][] = $day;
+                    $publicHolidaysMonthDay[$mappedMonth][] = $day;
                 }
 
                 $publicHolilday->setMonthDay($publicHolidaysMonthDay);
@@ -189,7 +222,7 @@ class PublicHolidaysController extends AbstractController
                 $entityManager->flush();
 
                 $publicHolidayFilterResult = [
-                    'public_holidays' => '',
+                    'public_holidays' => $publicHolidaysMonthDay,
                     'total_amount_of_public_holidays' => $totalAmountOfPublicHolidays,
                     'status' => '',
                     'max_number_of_free_days' => $maxFreeDaysInARow,
