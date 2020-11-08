@@ -9,6 +9,7 @@ use App\Form\PublicHolidayType;
 use App\Repository\CountryRepository;
 use App\Repository\DailyCountryChecksOnRequestRepository;
 use App\Repository\PublicHolidayRepository;
+use DateTime;
 use Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -103,7 +104,7 @@ class PublicHolidaysController extends AbstractController
 
             if ($dailyCountryChecksData = $dailyCountryChecksOnRequestRepository->findOneBy([
                 'country' => $formData['country']->getId(),
-                'updated_on' => new \DateTime($currentDate),
+                'updated_on' => new DateTime($currentDate),
             ])) {
                 $typeOfDay = $dailyCountryChecksData->getTypeOfDay();
             } else {
@@ -151,7 +152,7 @@ class PublicHolidaysController extends AbstractController
                 }
 
                 $dailyCountryChecksOnRequest->setTypeOfDay($typeOfDay);
-                $dailyCountryChecksOnRequest->setUpdatedOn(new \DateTime($currentDate));
+                $dailyCountryChecksOnRequest->setUpdatedOn(new DateTime($currentDate));
 
                 $entityManager->persist($dailyCountryChecksOnRequest);
                 $entityManager->flush();

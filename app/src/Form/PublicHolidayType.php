@@ -36,24 +36,4 @@ class PublicHolidayType extends AbstractType
             //
         ]);
     }
-
-    private function getAvailableCountries()
-    {
-        $availableCountriesArr = [];
-
-        $availableCountiesData = $this->countryRepository->findAll();
-
-        foreach ($availableCountiesData as $availableCountryData) {
-            $id = $availableCountryData->getId();
-            $fullName = $availableCountryData->getFullName();
-
-            $availableCountriesArr[$fullName] = $id;
-        }
-
-        if (empty($availableCountriesArr)) {
-            $availableCountriesArr['No available countries'] = 0;
-        }
-
-        return $availableCountriesArr;
-    }
 }

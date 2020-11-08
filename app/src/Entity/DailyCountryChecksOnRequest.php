@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\DailyCountryChecksOnRequestRepository;
+use DateTimeInterface;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -50,12 +51,12 @@ class DailyCountryChecksOnRequest
         return $this;
     }
 
-    public function getUpdatedOn(): ?\DateTimeInterface
+    public function getUpdatedOn(): ?DateTimeInterface
     {
         return $this->updated_on;
     }
 
-    public function setUpdatedOn(\DateTimeInterface $updated_on): self
+    public function setUpdatedOn(DateTimeInterface $updated_on): self
     {
         $this->updated_on = $updated_on;
 
